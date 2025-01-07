@@ -32,7 +32,7 @@ fn main() {
 
         let mut split = contents.split("\0");
         let contents = split.nth(1).expect("expect file to have contents");
-        println!("{}", contents);
+        print!("{}", contents);
 
     } else {
         println!("unknown command: {}", args[1])
