@@ -64,6 +64,6 @@ fn main() {
 
         println!("{}", String::from(hash));
     } else {
-        println!("unknown command: {}", args[1])
+        println!("Unknown command: {}", args[1])
     }
 }
