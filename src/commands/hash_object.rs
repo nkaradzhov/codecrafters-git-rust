@@ -4,23 +4,31 @@ use anyhow::Context;
 use flate2::{write::ZlibEncoder, Compression};
 use sha1_smol::Sha1;
 
-pub fn hash_object(write: bool, path: String) -> anyhow::Result<()> {
-    // let should_write = args[2] == "-w";
-    // let path = &args[3];
-    let object_type = "blob";
+type Sha = [u8; 20];
+pub fn hash_object(
+    object_type: &str,
+    write: bool,
+    contents: &[u8],
+) -> anyhow::Result<(String, Sha)> {
+    validate_object_type(object_type)?;
 
-    let contents = fs::read_to_string(path).expect("should point to a valid file path");
     let size = contents.len();
+    let header = format!("{} {}\0", object_type, size);
+    let header = header.as_bytes();
 
-    let contents = format!("{} {}\0{}", object_type, size, contents);
     let mut hasher = Sha1::new();
-    hasher.update(contents.as_bytes());
-    let hash = hasher.digest().to_string();
+    hasher.update(header);
+    hasher.update(contents);
+
+    let digest = hasher.digest();
+    let sha = digest.clone().bytes();
+    let hash = digest.to_string();
 
     if write {
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(header).context("write header")?;
         encoder
-            .write_all(contents.as_bytes())
+            .write_all(contents)
             .context("Could not compress file contents")?;
         let compressed = encoder
             .finish()
@@ -30,8 +38,16 @@ pub fn hash_object(write: bool, path: String) -> anyhow::Result<()> {
         let directory = format!(".git/objects/{dir}");
         fs::create_dir_all(&directory)
             .context(format!("Could not create directory {directory}"))?;
+        // for debugging purposes, write content uncompressed
+        // fs::write(&path, contents).context(format!("Could not write file {path}"))?;
         fs::write(&path, compressed).context(format!("Could not write file {path}"))?;
     }
-    println!("{}", hash);
+    Ok((hash, sha))
+}
+
+fn validate_object_type(object_type: &str) -> anyhow::Result<()> {
+    if object_type != "blob" && object_type != "commit" && object_type != "tree" {
+        anyhow::bail!(format!("Invalid object type {object_type}"));
+    }
     Ok(())
 }

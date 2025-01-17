@@ -2,6 +2,7 @@
 use std::env;
 #[allow(unused_imports)]
 use std::fs;
+use std::path::Path;
 
 use clap::ArgAction;
 use clap::Parser;
@@ -34,6 +35,8 @@ enum Commands {
         #[arg(short, long, action(ArgAction::SetTrue))]
         write: bool,
         path: String,
+        #[arg(short('t'), default_value("blob"))]
+        object_type: String,
     },
     LsTree {
         #[arg(short, long, action(ArgAction::SetTrue))]
@@ -49,7 +52,17 @@ fn main() -> anyhow::Result<()> {
     match args.command {
         Commands::Init => init(),
         Commands::CatFile { hash, p: _ } => cat_file(hash),
-        Commands::HashObject { write, path } => hash_object(write, path),
+        Commands::HashObject {
+            write,
+            path,
+            object_type,
+        } => {
+            let path = Path::new(&path);
+            let contents = fs::read_to_string(path).expect("should point to a valid file path");
+            let (hash, _) = hash_object(&object_type, write, contents.as_bytes())?;
+            println!("{}", hash);
+            Ok(())
+        }
         Commands::LsTree { name_only, hash } => ls_tree(hash, name_only),
         Commands::WriteTree => write_tree(),
     }
