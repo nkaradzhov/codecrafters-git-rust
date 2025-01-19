@@ -8,8 +8,8 @@ use clap::ArgAction;
 use clap::Parser;
 use clap::Subcommand;
 use commands::{
-    cat_file::cat_file, hash_object::hash_object, init::init, ls_tree::ls_tree,
-    write_tree::write_tree,
+    cat_file::cat_file, commit_tree::commit_tree, hash_object::hash_object, init::init,
+    ls_tree::ls_tree, write_tree::write_tree,
 };
 
 mod commands;
@@ -44,6 +44,14 @@ enum Commands {
         hash: String,
     },
     WriteTree,
+    CommitTree {
+        #[arg()]
+        tree_hash: String,
+        #[arg(short)]
+        message: String,
+        #[arg(short)]
+        parent_hash: Option<String>,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -65,5 +73,10 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::LsTree { name_only, hash } => ls_tree(hash, name_only),
         Commands::WriteTree => write_tree(),
+        Commands::CommitTree {
+            tree_hash,
+            message,
+            parent_hash,
+        } => commit_tree(tree_hash, parent_hash, message),
     }
 }
